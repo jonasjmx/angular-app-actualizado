@@ -1,0 +1,218 @@
+<div class="products-wrapper">
+  <div *ngIf="loading">Cargando productos, por favor espere...</div>
+
+  <!-- MODAL DE ERROR GLOBAL (PANTALLA SUPERPUESTA) -->
+  <div *ngIf="error" class="error-backdrop">
+    <div class="error-box-modal">
+      <button class="close-error-btn" (click)="error = ''">✕</button>
+      <h2>⚠️ Error</h2>
+      <p>{{ error }}</p>
+      <button class="btn-secondary" (click)="error = ''">Cerrar</button>
+    </div>
+  </div>
+
+  <div *ngIf="!loading">
+    <div class="header-row">
+      <h1>Gestión de Productos</h1>
+      <button id="btnNuevoProducto" class="action-btn-primary" (click)="openCreateModal()">
+        ➕ Nuevo Producto
+      </button>
+    </div>
+
+    <table class="products-table" *ngIf="productos && productos.length">
+      <thead>
+        <tr>
+          <th>Imagen</th>
+          <th>ID</th>
+          <th>Nombre</th>
+          <th>Stock</th>
+          <th>Precio</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let p of productos">
+          <!-- 🔥 COLUMNA IMAGEN -->
+          <td>
+            <ng-container *ngIf="p.imageBase64; else noProdImg">
+              <img [src]="'data:image/jpeg;base64,' + p.imageBase64" alt="Imagen producto" class="product-thumb" />
+            </ng-container>
+
+            <ng-template #noProdImg>
+              <div class="product-thumb-empty">Sin imagen</div>
+            </ng-template>
+          </td>
+
+          <td>{{ p.id || 'N/A' }}</td>
+          <td>{{ p.name || 'N/A' }}</td>
+          <td>{{ p.unitsInStock || 0 }}</td>
+          <td>${{ (p.unitPrice || 0) | number:'1.2-2' }}</td>
+          <td>
+            <button class="action-btn-edit" (click)="openEditModal(p)">✏️</button>
+            <button class="action-btn-delete" (click)="openDeleteModal(p)">🗑️</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="!loading && productos.length === 0">
+      <p>No hay productos registrados.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ========= MODAL CREAR PRODUCTO ========= -->
+<div class="modal-backdrop" *ngIf="isCreateModalOpen">
+  <div class="modal-box">
+    <h2>Nuevo producto</h2>
+
+    <form (ngSubmit)="createProduct()" class="product-form">
+      <div class="row">
+        <label>Nombre</label>
+        <input 
+          type="text" 
+          [(ngModel)]="newProduct.name" 
+          name="newName" 
+          (input)="sanitizeInput('new')"
+          [class.input-error]="formSubmitted && !isNameValid(newProduct.name)"
+        />
+        <small class="validation-msg" *ngIf="formSubmitted && !newProduct.name">El nombre es requerido.</small>
+        <small class="validation-msg" *ngIf="formSubmitted && newProduct.name && !isNameValid(newProduct.name)">Caracteres inválidos (solo A-Z, 0-9, - y ').</small>
+      </div>
+
+      <div class="row">
+        <label>Stock</label>
+        <input 
+          type="number" 
+          [(ngModel)]="newProduct.unitsInStock" 
+          name="newStock" 
+          [class.input-error]="formSubmitted && isStockInvalid(newProduct.unitsInStock)"
+        />
+        <small class="validation-msg" *ngIf="formSubmitted && isStockInvalid(newProduct.unitsInStock)">El stock debe ser mayor a 0.</small>
+      </div>
+
+      <div class="row">
+        <label>Precio unitario</label>
+        <input 
+          type="number" 
+          [(ngModel)]="newProduct.unitPrice" 
+          name="newPrice" 
+          step="0.01"
+          [class.input-error]="formSubmitted && isPriceInvalid(newProduct.unitPrice)"
+        />
+        <small class="validation-msg" *ngIf="formSubmitted && isPriceInvalid(newProduct.unitPrice)">El precio debe ser mayor a 0.</small>
+      </div>
+
+      <div class="buttons-row">
+        <button type="button" class="btn-secondary" (click)="closeCreateModal()">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ========= MODAL EDITAR PRODUCTO ========= -->
+<div class="modal-backdrop" *ngIf="isEditModalOpen">
+  <div class="modal-box">
+    <h2>Editar producto</h2>
+
+    <form (ngSubmit)="updateProduct()" class="product-form">
+      <div class="row">
+        <label>Nombre</label>
+        <input 
+          type="text" 
+          [(ngModel)]="editProduct.name" 
+          name="editName" 
+          (input)="sanitizeInput('edit')"
+          [class.input-error]="formSubmitted && !isNameValid(editProduct.name)"
+        />
+        <small class="validation-msg" *ngIf="formSubmitted && !editProduct.name">El nombre es requerido.</small>
+        <small class="validation-msg" *ngIf="formSubmitted && editProduct.name && !isNameValid(editProduct.name)">Caracteres inválidos (solo A-Z, 0-9, - y ').</small>
+      </div>
+
+      <div class="row">
+        <label>Stock</label>
+        <input 
+          type="number" 
+          [(ngModel)]="editProduct.unitsInStock" 
+          name="editStock" 
+          [class.input-error]="formSubmitted && isStockInvalid(editProduct.unitsInStock)"
+        />
+        <small class="validation-msg" *ngIf="formSubmitted && isStockInvalid(editProduct.unitsInStock)">El stock debe ser mayor a 0.</small>
+      </div>
+
+      <div class="row">
+        <label>Precio unitario</label>
+        <input 
+          type="number" 
+          [(ngModel)]="editProduct.unitPrice" 
+          name="editPrice" 
+          step="0.01"
+          [class.input-error]="formSubmitted && isPriceInvalid(editProduct.unitPrice)"
+        />
+        <small class="validation-msg" *ngIf="formSubmitted && isPriceInvalid(editProduct.unitPrice)">El precio debe ser mayor a 0.</small>
+      </div>
+
+      <div class="buttons-row">
+        <button type="button" class="btn-secondary" (click)="closeEditModal()">Cancelar</button>
+        <button type="submit" class="btn-primary">Guardar cambios</button>
+      </div>
+    </form>
+
+    <hr />
+
+    <!-- ==== SECCIÓN IMAGEN DEL PRODUCTO ==== -->
+    <div class="product-form">
+      <div class="row">
+        <label>Imagen del producto</label>
+
+        <div *ngIf="loadingImage">Cargando imagen...</div>
+
+        <div class="product-image-preview" *ngIf="currentProductImageSrc && !loadingImage; else noProdImgTpl">
+          <img [src]="currentProductImageSrc" alt="Imagen producto" />
+        </div>
+
+        <ng-template #noProdImgTpl>
+          <p class="hint" *ngIf="!loadingImage">
+            Este producto no tiene imagen.
+          </p>
+        </ng-template>
+      </div>
+
+      <div class="row">
+        <input type="file" accept="image/*" (change)="onProductImageSelected($event)" />
+        <small class="hint">
+          Selecciona una imagen (jpg, png, etc.). Se enviará en base64 al servidor.
+        </small>
+      </div>
+
+      <div class="buttons-row">
+        <button *ngIf="hasProductImage" type="button" class="btn-secondary" (click)="deleteProductImage()">
+          Eliminar imagen
+        </button>
+        <button type="button" class="btn-primary" (click)="saveProductImage()">
+          Guardar imagen
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ========= MODAL ELIMINAR PRODUCTO (CONFIRMACIÓN) ========= -->
+<div class="modal-backdrop" *ngIf="isDeleteModalOpen">
+  <div class="modal-box text-center">
+    <h2>¿Estás seguro?</h2>
+    <p>
+      Estás a punto de eliminar el producto: <br/>
+      <strong>{{ productToDelete?.name }}</strong>
+    </p>
+    <p style="font-size: 0.9em; color: #64748b;">
+      Esta acción no se puede deshacer.
+    </p>
+
+    <div class="buttons-row buttons-center">
+      <button type="button" class="btn-secondary" (click)="closeDeleteModal()">Cancelar</button>
+      <button type="button" class="btn-danger" (click)="confirmDelete()">Eliminar Definitivamente</button>
+    </div>
+  </div>
+</div>

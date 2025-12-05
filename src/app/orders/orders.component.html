@@ -1,0 +1,152 @@
+<div class="orders-container">
+  <h1>Órdenes de Venta</h1>
+
+  <!-- Mensajes -->
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+  <div *ngIf="success" class="alert alert-success">{{ success }}</div>
+
+  <!-- Buscador Inteligente -->
+  <div class="search-box">
+    <input type="text" placeholder="Buscar por ID, cliente, fecha, producto, ciudad..." [(ngModel)]="searchText"
+      (input)="applySearchFilter()" />
+    <i class="fa-solid fa-magnifying-glass search-icon"></i>
+  </div>
+
+  <!-- Filtro por cliente -->
+  <div class="filter-box">
+    <label>Filtrar por cliente:</label>
+    <select [(ngModel)]="selectedCustomerFilter" (change)="onFilterChange()">
+      <option value="">-- Todos --</option>
+      <option *ngFor="let c of customers" [value]="c.id">
+        {{ getCustomerLabel(c) }}
+      </option>
+    </select>
+  </div>
+
+
+
+  <!-- Tabla Órdenes -->
+  <table class="orders-table" *ngIf="filteredOrders && filteredOrders.length">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Cliente</th>
+        <th>Fecha</th>
+        <th>Dirección Envío</th>
+        <th>Total</th>
+        <th class="actions-col">Acciones</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr *ngFor="let o of filteredOrders">
+        <td>{{ o.id }}</td>
+        <td>{{ getCustomerName(o) }}</td>
+        <td>{{ o.orderDate | date:'short' }}</td>
+
+        <td>
+          {{ o.shipAddress }},
+          {{ o.shipCity }},
+          {{ o.shipCountry }}
+        </td>
+
+        <td>
+          {{ getOrderTotal(o) | currency:'USD':'symbol' }}
+        </td>
+
+        <td class="actions-col">
+          <!-- Ver Detalle -->
+          <button class="icon-btn view" (click)="openDetail(o)" title="Ver Detalles">
+            <i class="fa-solid fa-eye"></i>
+          </button>
+
+          <!-- Editar -->
+          <button class="icon-btn edit" (click)="openEdit(o)" title="Editar Orden">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+
+          <!-- PDF -->
+          <button class="icon-btn pdf" (click)="downloadPdf(o)" title="Descargar PDF">
+            <i class="fa-solid fa-file-pdf"></i>
+          </button>
+
+          <!-- Eliminar -->
+          <button class="icon-btn delete" (click)="deleteOrder(o)" title="Eliminar Orden">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div *ngIf="!filteredOrders.length && !loading">
+    <p>No hay órdenes disponibles.</p>
+  </div>
+</div>
+
+
+<!-- ================================
+        MODAL VER DETALLE ORDEN
+================================ -->
+<div class="modal-backdrop" *ngIf="showDetailModal">
+  <div class="modal-content">
+    <h2>Detalle de la Orden #{{ detailOrder?.id }}</h2>
+
+    <button class="close-btn" (click)="closeDetailModal()">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+
+    <div class="detail-section">
+      <h3>Cliente</h3>
+      <p><strong>Nombre:</strong> {{ getCustomerName(detailOrder) }}</p>
+      <p><strong>Cédula:</strong> {{ getCustomerCedula(detailOrder) }}</p>
+      <p><strong>Email:</strong> {{ getCustomerEmail(detailOrder) }}</p>
+      <p><strong>Teléfono:</strong> {{ getCustomerPhone(detailOrder) }}</p>
+    </div>
+
+
+    <div class="detail-section">
+      <h3>Información de Envío</h3>
+      <p><strong>Dirección:</strong> {{ detailOrder?.shipAddress }}</p>
+      <p><strong>Ciudad:</strong> {{ detailOrder?.shipCity }}</p>
+      <p><strong>País:</strong> {{ detailOrder?.shipCountry }}</p>
+      <p><strong>Código Postal:</strong> {{ detailOrder?.shipPostalCode }}</p>
+    </div>
+
+    <div class="detail-section">
+      <h3>Productos Comprados</h3>
+
+      <table class="details-table">
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th>Cantidad</th>
+            <th>Precio Unit.</th>
+            <th>Subtotal</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let d of detailOrder?.orderDetails">
+            <td>{{ getProductName(d.productId) }}</td>
+            <td>{{ d.quantity }}</td>
+            <td>$ {{ d.unitPrice.toFixed(2) }}</td>
+            <td>$ {{ (d.quantity * d.unitPrice).toFixed(2) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="totals-box">
+      <p><strong>Subtotal:</strong> ${{ getOrderSubtotal(detailOrder!) | number:'1.2-2' }}</p>
+      <p><strong>IVA 15%:</strong> ${{ getOrderIVA(detailOrder!) | number:'1.2-2' }}</p>
+      <p><strong>Total:</strong> ${{ getOrderTotal(detailOrder!) | number:'1.2-2' }}</p>
+    </div>
+
+    <div class="modal-actions">
+      <button class="action-btn pdf-btn" (click)="downloadPdf(detailOrder!)">
+        <i class="fa-solid fa-file-pdf"></i> Descargar PDF
+      </button>
+    </div>
+  </div>
+</div>

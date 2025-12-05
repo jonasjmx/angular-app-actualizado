@@ -1,0 +1,389 @@
+<div class="users-container">  
+
+  <h1>Gestión de Usuarios</h1>
+
+  <div *ngIf="error" class="alert alert-error">{{ error }}</div>
+  <div *ngIf="success" class="alert alert-success">{{ success }}</div>
+
+  <div class="header-row">
+    <h2>Usuarios registrados</h2>
+    <button class="btn-primary" (click)="openCreateModal()">Crear usuario</button>
+  </div>
+
+  <div *ngIf="loadingUsers">Cargando usuarios...</div>
+
+  <table *ngIf="!loadingUsers && users.length" class="users-table">
+    <thead>
+      <tr>
+        <th>Foto</th>
+        <th>Email</th>
+        <th>Nombres</th>
+        <th>Apellidos</th>
+        <th>Roles</th>
+        <th>Bloqueado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr *ngFor="let u of users">
+        <td>
+          <img
+            *ngIf="u.profileImage; else noImg"
+            [src]="'data:image/jpeg;base64,' + u.profileImage"
+            class="user-thumb" />
+          <ng-template #noImg>
+            <div class="user-thumb-empty">Sin foto</div>
+          </ng-template>
+        </td>
+
+        <td>{{ u.email }}</td>
+        <td>{{ u.firstName }}</td>
+        <td>{{ u.lastName }}</td>
+        <td>
+          <span *ngFor="let r of u.roles">{{ r }} </span>
+        </td>
+        <td>{{ u.lockoutEnabled ? 'Sí' : 'No' }}</td>
+        <td>
+          <button type="button" class="action-btn-edit" (click)="openEditModal(u)">✏️</button>
+          <button type="button" class="action-btn-delete" (click)="openDeleteModal(u)">🗑️</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p *ngIf="!loadingUsers && users.length === 0">
+    No hay usuarios registrados.
+  </p>
+
+  <hr />
+
+  <h2>Roles disponibles</h2>
+  <div *ngIf="loadingRoles">Cargando roles...</div>
+  <ul *ngIf="!loadingRoles">
+    <li *ngFor="let r of roles">
+      <strong>{{ r.name }}</strong><br />
+      Permisos:
+      <span *ngFor="let p of r.permissions">{{ p }} | </span>
+    </li>
+  </ul>
+</div>
+
+<div class="modal-backdrop" *ngIf="isCreateModalOpen">
+  <div class="modal-box">
+    <h2>Crear usuario</h2>
+
+    <form
+      (ngSubmit)="register()"
+      #createUserForm="ngForm"
+      class="user-form">
+
+      <div class="row">
+        <label>Email</label>
+        <input
+          type="email"
+          [(ngModel)]="newUser.email"
+          name="email"
+          required
+          email
+          pattern="^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$"
+          #emailCtrl="ngModel" 
+          [class.input-error]="emailCtrl.invalid && (emailCtrl.dirty || emailCtrl.touched)"
+        />
+        <div class="validation-error"
+             *ngIf="emailCtrl.invalid && (emailCtrl.dirty || emailCtrl.touched)">
+          <span *ngIf="emailCtrl.errors?.['required']">Este campo es obligatorio.</span>
+          <span *ngIf="emailCtrl.errors?.['email'] || emailCtrl.errors?.['pattern']">Ingrese un email válido.</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Contraseña</label>
+        <input
+          type="password"
+          [(ngModel)]="newUser.password"
+          name="password"
+          required
+          [pattern]="passwordPattern"
+          #passwordCtrl="ngModel" 
+          [class.input-error]="passwordCtrl.invalid && (passwordCtrl.dirty || passwordCtrl.touched)"
+        />
+        <div class="validation-error"
+             *ngIf="passwordCtrl.invalid && (passwordCtrl.dirty || passwordCtrl.touched)">
+          <span *ngIf="passwordCtrl.errors?.['required']">Este campo es obligatorio.</span>
+          <span *ngIf="passwordCtrl.errors?.['pattern']">
+            La contraseña debe tener mínimo 8 caracteres, mayúscula, minúscula, número y símbolo.
+          </span>
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Nombres</label>
+        <input
+          type="text"
+          [(ngModel)]="newUser.firstName"
+          name="firstName"
+          required
+          [pattern]="namePattern"
+          (keydown)="allowOnlyLetters($event)" 
+          (input)="sanitizeNameInput(newUser, 'firstName')"
+          #firstNameCtrl="ngModel" 
+          [class.input-error]="firstNameCtrl.invalid && (firstNameCtrl.dirty || firstNameCtrl.touched)"
+        />
+        <div class="validation-error"
+             *ngIf="firstNameCtrl.invalid && (firstNameCtrl.dirty || firstNameCtrl.touched)">
+          <span *ngIf="firstNameCtrl.errors?.['required']">Este campo es obligatorio.</span>
+          <span *ngIf="firstNameCtrl.errors?.['pattern']">Solo se permiten letras y espacios.</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Apellidos</label>
+        <input
+          type="text"
+          [(ngModel)]="newUser.lastName"
+          name="lastName"
+          required
+          [pattern]="namePattern"
+          (keydown)="allowOnlyLetters($event)"
+          (input)="sanitizeNameInput(newUser, 'lastName')"
+          #lastNameCtrl="ngModel" 
+          [class.input-error]="lastNameCtrl.invalid && (lastNameCtrl.dirty || lastNameCtrl.touched)"
+        />
+        <div class="validation-error"
+             *ngIf="lastNameCtrl.invalid && (lastNameCtrl.dirty || lastNameCtrl.touched)">
+          <span *ngIf="lastNameCtrl.errors?.['required']">Este campo es obligatorio.</span>
+          <span *ngIf="lastNameCtrl.errors?.['pattern']">Solo se permiten letras y espacios.</span>
+        </div>
+      </div>
+
+      <div class="buttons-row">
+        <button type="button" class="btn-secondary" (click)="closeCreateModal()">Cancelar</button>
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="createUserForm.invalid">
+          Crear usuario
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" *ngIf="isEditModalOpen">
+  <div class="modal-box">
+    <h2>Editar usuario</h2>
+
+    <form
+      (ngSubmit)="saveEdit()"
+      #editUserForm="ngForm"
+      class="user-form">
+
+      <div class="row">
+        <label>Nombres</label>
+        <input
+          type="text"
+          [(ngModel)]="editUser.firstName"
+          name="editFirstName"
+          required
+          [pattern]="namePattern"
+          (keydown)="allowOnlyLetters($event)"
+          (input)="sanitizeNameInput(editUser, 'firstName')"
+          #editFirstNameCtrl="ngModel"
+          [class.input-error]="editFirstNameCtrl.invalid && (editFirstNameCtrl.dirty || editFirstNameCtrl.touched)"
+        />
+        <div class="validation-error"
+             *ngIf="editFirstNameCtrl.invalid && (editFirstNameCtrl.dirty || editFirstNameCtrl.touched)">
+          <span *ngIf="editFirstNameCtrl.errors?.['required']">Este campo es obligatorio.</span>
+          <span *ngIf="editFirstNameCtrl.errors?.['pattern']">Solo se permiten letras y espacios.</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Apellidos</label>
+        <input
+          type="text"
+          [(ngModel)]="editUser.lastName"
+          name="editLastName"
+          required
+          [pattern]="namePattern"
+          (keydown)="allowOnlyLetters($event)"
+          (input)="sanitizeNameInput(editUser, 'lastName')"
+          #editLastNameCtrl="ngModel"
+          [class.input-error]="editLastNameCtrl.invalid && (editLastNameCtrl.dirty || editLastNameCtrl.touched)"
+        />
+        <div class="validation-error"
+             *ngIf="editLastNameCtrl.invalid && (editLastNameCtrl.dirty || editLastNameCtrl.touched)">
+          <span *ngIf="editLastNameCtrl.errors?.['required']">Este campo es obligatorio.</span>
+          <span *ngIf="editLastNameCtrl.errors?.['pattern']">Solo se permiten letras y espacios.</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <label>Teléfono</label>
+        <input
+          type="text"
+          [(ngModel)]="editUser.phoneNumber"
+          name="editPhone"
+          pattern="^[0-9]{10}$"
+          maxlength="10"
+          (keypress)="allowOnlyNumbers($event)"
+          (blur)="phoneEditInvalid = !!editUser.phoneNumber && !validatePhone(editUser.phoneNumber)"
+          #editPhoneCtrl="ngModel" 
+          [class.input-error]="editPhoneCtrl.invalid || phoneEditInvalid"
+        />
+        <div class="validation-error"
+             *ngIf="editPhoneCtrl.invalid && (editPhoneCtrl.dirty || editPhoneCtrl.touched)">
+          <span *ngIf="editPhoneCtrl.errors?.['pattern']">
+            El teléfono debe tener 10 dígitos numéricos.
+          </span>
+        </div>
+        <div class="validation-error" *ngIf="!editPhoneCtrl.invalid && phoneEditInvalid">
+          El número de teléfono no es válido.
+        </div>
+      </div>
+
+      <div class="row">
+        <label>
+          <input type="checkbox"
+                 [(ngModel)]="editUser.emailConfirmed"
+                 name="editEmailConfirmed" />
+          Email confirmado
+        </label>
+      </div>
+
+      <div class="row">
+        <label>
+          <input type="checkbox"
+                 [(ngModel)]="editUser.lockoutEnabled"
+                 name="editLockoutEnabled" />
+          Bloqueado
+        </label>
+      </div>
+
+      <div class="buttons-row">
+        <button class="btn-secondary" type="button" (click)="closeEditModal()">Cerrar</button>
+        <button
+          class="btn-primary"
+          type="submit"
+          [disabled]="editUserForm.invalid || phoneEditInvalid">
+          Guardar datos
+        </button>
+      </div>
+    </form>
+
+    <hr />
+
+    <div class="user-form">
+      <div class="row">
+        <label>Roles actuales</label>
+        <p class="roles-list">
+          <span *ngIf="editUserRoles.length; else noRoles">
+            <span *ngFor="let rn of editUserRoles">{{ rn }} </span>
+          </span>
+          <ng-template #noRoles>
+            Este usuario no tiene roles asignados.
+          </ng-template>
+        </p>
+      </div>
+
+      <div class="row" *ngIf="editUserRoles.length > 0">
+        <label>Rol actual</label>
+        <select [(ngModel)]="editCurrentRoleId" name="editCurrentRoleId">
+          <option *ngFor="let rn of editUserRoles" [value]="findRoleIdByName(rn)">
+            {{ rn }}
+          </option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label>Nuevo rol</label>
+        <select [(ngModel)]="editNewRoleId" name="editNewRoleId">
+          <option value="">-- Seleccione un rol --</option>
+          <option *ngFor="let r of roles" [value]="r.id">{{ r.name }}</option>
+        </select>
+        <small class="hint">
+          Si el usuario no tiene rol, se asignará el nuevo.
+          Si ya tiene, se reemplazará el rol seleccionado.
+        </small>
+      </div>
+
+      <div class="buttons-row">
+        <button *ngIf="editUserRoles.length > 0"
+                type="button"
+                class="btn-secondary"
+                (click)="removeRole()">
+          Quitar rol
+        </button>
+        <button type="button" class="btn-primary" (click)="changeRole()">Guardar rol</button>
+      </div>
+    </div>
+
+    <hr />
+
+    <div class="user-form">
+      <div class="row">
+        <label>Imagen de perfil</label>
+
+        <div *ngIf="loadingImage">Cargando imagen...</div>
+
+        <div class="image-preview" *ngIf="currentUserImageSrc && !loadingImage; else noImageTpl">
+          <img [src]="currentUserImageSrc" alt="Imagen de usuario" />
+        </div>
+
+        <ng-template #noImageTpl>
+          <p class="hint" *ngIf="!loadingImage">
+            Este usuario no tiene imagen de perfil.
+          </p>
+        </ng-template>
+      </div>
+
+      <div class="row">
+        <input type="file" accept="image/*" (change)="onImageSelected($event)" />
+        <small class="hint">
+          Selecciona una imagen (jpg, png, etc.). Se enviará en base64 al servidor.
+        </small>
+      </div>
+
+      <div class="buttons-row">
+        <button *ngIf="hasUserImage" type="button" class="btn-secondary" (click)="deleteUserImage()">
+          Eliminar imagen
+        </button>
+        <button type="button" class="btn-primary" (click)="saveUserImage()">
+          Guardar imagen
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="modal-backdrop" *ngIf="isDeleteModalOpen">
+  <div class="modal-box-small">
+    <h2>¿Estás seguro?</h2>
+    <p>
+      Estás a punto de eliminar al usuario:<br>
+      <strong>{{ userToDelete?.email }}</strong>
+    </p>
+    <p style="font-size: 0.9em; color: #64748b;">
+      Esta acción es irreversible y eliminará todos sus datos.
+    </p>
+
+    <div class="buttons-row buttons-center">
+      <button type="button" class="btn-secondary" (click)="closeDeleteModal()">Cancelar</button>
+      <button type="button" class="btn-danger" (click)="confirmDelete()">Eliminar Definitivamente</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" *ngIf="isErrorModalOpen">
+  <div class="modal-box-small">
+    <h2 style="color: #e74c3c;">⚠️ Error</h2>
+    <p class="alert alert-error" style="text-align: left;">
+      {{ modalErrorMessage }}
+    </p>
+    <div class="buttons-row buttons-center">
+      <button type="button" class="btn-primary" (click)="closeErrorModal()">Aceptar</button>
+    </div>
+  </div>
+</div>

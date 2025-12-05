@@ -1,0 +1,245 @@
+<div class="dashboard-container">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <h3 class="menu-title">
+      <i class="fa-solid fa-gauge-high icon-left"></i>
+      Panel principal
+    </h3>
+
+    <ul class="menu-list">
+      <!-- Inicio (todos lo ven) -->
+      <li
+        class="menu-item"
+        [class.active]="selectedSection==='inicio'"
+        (click)="selectSection('inicio')">
+        <i class="fa-solid fa-house icon"></i>
+        <span>Inicio</span>
+      </li>
+
+      <!-- SOLO ADMIN: Usuarios -->
+      <li
+        *ngIf="isAdmin"
+        class="menu-item"
+        [class.active]="selectedSection==='usuarios'"
+        (click)="selectSection('usuarios')">
+        <i class="fa-solid fa-user-gear icon"></i>
+        <span>Usuarios</span>
+      </li>
+
+      <!-- TODOS: Clientes, Ventas, Productos -->
+      <li
+        class="menu-item"
+        [class.active]="selectedSection==='clientes'"
+        (click)="selectSection('clientes')">
+        <i class="fa-solid fa-users icon"></i>
+        <span>Clientes</span>
+      </li>
+
+      <li
+        class="menu-item"
+        [class.active]="selectedSection==='ventas'"
+        (click)="selectSection('ventas')">
+        <i class="fa-solid fa-file-invoice-dollar icon"></i>
+        <span>Ventas</span>
+      </li>
+
+      <li
+        class="menu-item"
+        [class.active]="selectedSection==='productos'"
+        (click)="selectSection('productos')">
+        <i class="fa-solid fa-boxes-stacked icon"></i>
+        <span>Productos</span>
+      </li>
+
+      <!-- SOLO ADMIN: Órdenes y Logs -->
+      <li
+        *ngIf="isAdmin"
+        class="menu-item"
+        [class.active]="selectedSection==='ordenes'"
+        (click)="selectSection('ordenes')">
+        <i class="fa-solid fa-receipt icon"></i>
+        <span>Órdenes</span>
+      </li>
+
+      <li
+        *ngIf="isAdmin"
+        class="menu-item"
+        [class.active]="selectedSection==='logs'"
+        (click)="selectSection('logs')">
+        <i class="fa-solid fa-scroll icon"></i>
+        <span>Logs de dominio</span>
+      </li>
+    </ul>
+  </aside>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="content">
+    <!-- TOP BAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <h1>
+          <i class="fa-solid fa-circle-user"></i>
+          <span *ngIf="isAdmin">Bienvenido, Administrador</span>
+          <span *ngIf="isLimitedUser">Bienvenido</span>
+        </h1>
+
+        <!-- Etiqueta de rol -->
+        <span *ngIf="isAdmin" class="role-badge admin">
+          <i class="fa-solid fa-crown"></i> Modo administrador
+        </span>
+
+        <span *ngIf="isLimitedUser" class="role-badge limited">
+          <i class="fa-solid fa-user-lock"></i> Acceso limitado
+        </span>
+      </div>
+
+      <button class="btn-logout" (click)="logout()">
+        <i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión
+      </button>
+    </div>
+
+    <!-- Aviso para usuarios limitados -->
+    <div *ngIf="isLimitedUser" class="limited-banner">
+      <i class="fa-solid fa-circle-info"></i>
+      Usted tiene un rol con permisos limitados. Sólo puede acceder a
+      <strong>Clientes, Ventas y Productos</strong>.
+    </div>
+
+    <!-- =================== SECCIÓN INICIO =================== -->
+    <div *ngIf="selectedSection==='inicio'" class="section visible">
+      <!-- Tarjeta bienvenida -->
+      <div class="welcome-card">
+        <h2>Resumen general</h2>
+        <p *ngIf="isAdmin">
+          Desde este panel puede administrar usuarios, clientes, ventas, productos,
+          órdenes y visualizar los logs de la aplicación.
+        </p>
+        <p *ngIf="isLimitedUser">
+          Desde este panel puede gestionar sus <strong>clientes</strong>,
+          registrar <strong>ventas</strong> y administrar
+          <strong>productos</strong>.
+        </p>
+      </div>
+
+      <!-- KPIs -->
+      <div class="kpi-grid">
+        <div class="kpi-card kpi-clients">
+          <div class="kpi-icon">
+            <i class="fa-solid fa-users"></i>
+          </div>
+          <div class="kpi-content">
+            <span class="kpi-label">Clientes</span>
+            <span class="kpi-value">{{ totalClientes }}</span>
+            <span class="kpi-sub">Registrados en el sistema</span>
+          </div>
+        </div>
+
+        <div class="kpi-card kpi-sales">
+          <div class="kpi-icon">
+            <i class="fa-solid fa-coins"></i>
+          </div>
+          <div class="kpi-content">
+            <span class="kpi-label">Ventas del mes</span>
+            <span class="kpi-value">${{ totalVentasMes | number:'1.2-2' }}</span>
+            <span class="kpi-sub">Monto facturado</span>
+          </div>
+        </div>
+
+        <div class="kpi-card kpi-products">
+          <div class="kpi-icon">
+            <i class="fa-solid fa-boxes-stacked"></i>
+          </div>
+          <div class="kpi-content">
+            <span class="kpi-label">Productos activos</span>
+            <span class="kpi-value">{{ totalProductos }}</span>
+            <span class="kpi-sub">Disponibles para la venta</span>
+          </div>
+        </div>
+
+        <div class="kpi-card kpi-orders" *ngIf="isAdmin">
+          <div class="kpi-icon">
+            <i class="fa-solid fa-receipt"></i>
+          </div>
+          <div class="kpi-content">
+            <span class="kpi-label">Órdenes pendientes</span>
+            <span class="kpi-value">{{ totalOrdenesPendientes }}</span>
+            <span class="kpi-sub">Por despachar</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gráficas “light” sin librerías -->
+      <div class="charts-row">
+        <!-- Ventas por mes -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Ventas del último año</h3>
+            <span class="chart-subtitle">Monto en USD por mes</span>
+          </div>
+
+          <div class="bar-chart">
+            <div
+              class="bar-item"
+              *ngFor="let m of monthlySales">
+              <div
+                class="bar"
+                [ngStyle]="{ height: (m.value / maxMonthlySales * 100) + '%' }">
+              </div>
+              <span class="bar-label">{{ m.label }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Top productos -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <h3>Top productos vendidos</h3>
+            <span class="chart-subtitle">Cantidad de unidades</span>
+          </div>
+
+          <div class="top-products-list">
+            <div
+              class="top-product-item"
+              *ngFor="let p of topProducts">
+              <div class="top-product-header">
+                <span class="top-product-name">{{ p.name }}</span>
+                <span class="top-product-value">{{ p.value }}</span>
+              </div>
+              <div class="top-product-bar-bg">
+                <div
+                  class="top-product-bar-fill"
+                  [ngStyle]="{ width: (p.value / maxProductSales * 100) + '%' }">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESTO DE SECCIONES -->
+    <div *ngIf="selectedSection==='usuarios'" class="section">
+      <app-users></app-users>
+    </div>
+
+    <div *ngIf="selectedSection==='clientes'" class="section">
+      <app-clients></app-clients>
+    </div>
+
+    <div *ngIf="selectedSection==='ventas'" class="section">
+      <app-sales></app-sales>
+    </div>
+
+    <div *ngIf="selectedSection==='productos'" class="section">
+      <app-products></app-products>
+    </div>
+
+    <div *ngIf="selectedSection==='ordenes'" class="section">
+      <app-orders></app-orders>
+    </div>
+
+    <div *ngIf="selectedSection==='logs'" class="section">
+      <app-domain-logs></app-domain-logs>
+    </div>
+  </main>
+</div>

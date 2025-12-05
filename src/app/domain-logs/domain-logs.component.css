@@ -1,0 +1,100 @@
+.logs-wrapper {
+  width: 100%;
+  font-family: Arial, sans-serif;
+}
+
+.logs-wrapper h1 {
+  margin-bottom: 15px;
+  color: #164e63;
+}
+
+/* ALERTAS */
+.alert {
+  padding: 10px 12px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.alert-error {
+  background: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+/* FILTROS */
+.filters-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  margin-bottom: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+}
+
+.field label {
+  font-weight: bold;
+  margin-bottom: 4px;
+}
+
+.field select {
+  padding: 6px 8px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  min-width: 180px;
+}
+
+/* Buscador */
+.search-box {
+  width: 400px;
+  max-width: 100%;
+  position: relative;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 8px 36px 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+}
+
+.search-box input:focus {
+  border-color: #236fa2;
+  outline: none;
+  box-shadow: 0 0 4px rgba(35, 111, 162, 0.3);
+}
+
+.search-icon {
+  position: absolute;
+  right: 10px;
+  top: 7px;
+  font-size: 1rem;
+  color: #666;
+}
+
+/* TABLA */
+.logs-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.logs-table th,
+.logs-table td {
+  border: 1px solid #e5e7eb;
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.logs-table thead th {
+  background: #f9fafb;
+  font-weight: bold;
+}
+
+.logs-table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}

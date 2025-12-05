@@ -1,0 +1,60 @@
+<div class="logs-wrapper">
+
+  <h1>Registro de acciones (Logs)</h1>
+
+  <!-- ALERTAS -->
+  <div *ngIf="error" class="alert alert-error">
+    {{ error }}
+  </div>
+
+  <div *ngIf="loading">Cargando logs, por favor espere...</div>
+
+  <div *ngIf="!loading && !error">
+
+    <!-- FILTROS -->
+    <div class="filters-row">
+      <!-- Buscador -->
+      <div class="search-box">
+        <input
+          type="text"
+          placeholder="Buscar por usuario, fecha, mensaje, ID..."
+          [(ngModel)]="searchText"
+          (input)="onFiltersChange()" />
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+      </div>
+
+      <!-- Filtro usuario -->
+      <div class="field">
+        <label>Usuario</label>
+        <select [(ngModel)]="selectedUser" (change)="onFiltersChange()">
+          <option value="">-- Todos --</option>
+          <option *ngFor="let u of usersDistinct" [value]="u">{{ u }}</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- TABLA DE LOGS -->
+    <table class="logs-table" *ngIf="filteredLogs && filteredLogs.length">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Fecha</th>
+          <th>Usuario</th>
+          <th>Información</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let log of filteredLogs">
+          <td>{{ log.id }}</td>
+          <td>{{ log.createdDate | date:'short' }}</td>
+          <td>{{ log.userName }}</td>
+          <td>{{ log.information }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p *ngIf="!filteredLogs.length">
+      No se encontraron logs con los filtros seleccionados.
+    </p>
+  </div>
+</div>

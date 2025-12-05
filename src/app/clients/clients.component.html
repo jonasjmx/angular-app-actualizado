@@ -1,0 +1,342 @@
+<div class="clients-wrapper">
+  <h1>Gestión de Clientes</h1>
+
+  <!-- ALERTAS SUPERIORES (Se mantiene para errores no-modal) -->
+  <div *ngIf="error" class="alert alert-error">
+    {{ error }}
+  </div>
+
+  <div *ngIf="loading">Cargando clientes, por favor espere...</div>
+
+  <div *ngIf="!loading && !error">
+    <div class="header-row">
+      <h2>Lista de clientes</h2>
+      <button class="btn-primary" (click)="openCreateModal()">➕ Nuevo cliente</button>
+    </div>
+
+    <table class="clients-table" *ngIf="clientes && clientes.length">
+      <thead>
+        <tr>
+          <th>Cédula</th>
+          <th>Nombre completo</th>
+          <th>Email</th>
+          <th>Teléfono</th>
+          <th>Saldo actual</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let c of clientes">
+          <td>{{ c.cedula }}</td>
+          <td>{{ c.firstName }} {{ c.lastName }}</td>
+          <td>{{ c.email }}</td>
+          <td>{{ c.phoneNumber }}</td>
+          <td>${{ (c.currentBalance || 0) | number:'1.2-2' }}</td>
+          <td>
+            <button class="action-btn-edit" (click)="openEditModal(c)">✏️</button>
+            <button class="action-btn-delete" (click)="openDeleteModal(c)">🗑️</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p *ngIf="clientes.length === 0">
+      No hay clientes registrados.
+    </p>
+  </div>
+</div>
+
+<!-- ======== MODAL CREAR CLIENTE ======== -->
+<div class="modal-backdrop" *ngIf="isCreateModalOpen">
+  <div class="modal-box">
+    <h2>Nuevo cliente</h2>
+
+    <form
+      (ngSubmit)="createCustomer()"
+      #createForm="ngForm"
+      class="client-form">
+
+      <!-- NOMBRES -->
+      <div class="row">
+        <label>Nombres</label>
+        <input
+          type="text"
+          [(ngModel)]="newCustomer.firstName"
+          name="newFirstName"
+          required
+          minlength="2"
+          (keypress)="allowOnlyLetters($event)"
+          (input)="sanitizeNameInput(newCustomer, 'firstName')"
+          #newFirstName="ngModel"
+          [class.input-error]="newFirstName.invalid && (newFirstName.dirty || newFirstName.touched)"
+        />
+        <div class="validation-error"
+             *ngIf="newFirstName.invalid && (newFirstName.dirty || newFirstName.touched)">
+          <span *ngIf="newFirstName.errors?.['required']">Este campo es obligatorio.</span>
+          <span *ngIf="newFirstName.errors?.['minlength']">Debe tener al menos 2 caracteres.</span>
+        </div>
+      </div>
+
+      <!-- APELLIDOS -->
+      <div class="row">
+        <label>Apellidos</label>
+        <input
+          type="text"
+          [(ngModel)]="newCustomer.lastName"
+          name="newLastName"
+          required
+          minlength="2"
+          (keypress)="allowOnlyLetters($event)"
+          (input)="sanitizeNameInput(newCustomer, 'lastName')"
+          #newLastName="ngModel"
+          [class.input-error]="newLastName.invalid && (newLastName.dirty || newLastName.touched)"
+        />
+        <div class="validation-error"
+             *ngIf="newLastName.invalid && (newLastName.dirty || newLastName.touched)">
+          <span *ngIf="newLastName.errors?.['required']">Este campo es obligatorio.</span>
+          <span *ngIf="newLastName.errors?.['minlength']">Debe tener al menos 2 caracteres.</span>
+        </div>
+      </div>
+
+      <!-- CÉDULA -->
+      <div class="row">
+        <label>Cédula</label>
+        <input
+          type="text"
+          [(ngModel)]="newCustomer.cedula"
+          name="newCedula"
+          required
+          pattern="^[0-9]{10}$"
+          maxlength="10"
+          (keypress)="allowOnlyNumbers($event)"
+          #newCedula="ngModel"
+          [class.input-error]="newCedula.invalid && (newCedula.dirty || newCedula.touched) || cedulaCreateInvalid"
+          (blur)="cedulaCreateInvalid = !validateCedulaEc(newCustomer.cedula)" />
+        <div class="validation-error"
+             *ngIf="newCedula.invalid && (newCedula.dirty || newCedula.touched)">
+          <span *ngIf="newCedula.errors?.['required']">Este campo es obligatorio.</span>
+          <span *ngIf="newCedula.errors?.['pattern']">La cédula debe tener 10 dígitos numéricos.</span>
+        </div>
+        <div class="validation-error"
+             *ngIf="!newCedula.invalid && cedulaCreateInvalid">
+          La cédula no es válida según el algoritmo de Ecuador.
+        </div>
+      </div>
+
+      <!-- EMAIL -->
+      <div class="row">
+        <label>Email</label>
+        <input
+          type="email"
+          [(ngModel)]="newCustomer.email"
+          name="newEmail"
+          required
+          pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+          #newEmail="ngModel"
+          [class.input-error]="newEmail.invalid && (newEmail.dirty || newEmail.touched)"
+        />
+        <div class="validation-error"
+             *ngIf="newEmail.invalid && (newEmail.dirty || newEmail.touched)">
+          <span *ngIf="newEmail.errors?.['required']">Este campo es obligatorio.</span>
+          <span *ngIf="newEmail.errors?.['pattern'] || newEmail.errors?.['email']">Ingrese un email válido.</span>
+        </div>
+      </div>
+
+      <!-- TELÉFONO -->
+      <div class="row">
+        <label>Teléfono</label>
+        <input
+          type="text"
+          [(ngModel)]="newCustomer.phoneNumber"
+          name="newPhone"
+          required
+          pattern="^[0-9]{10}$"
+          maxlength="10"
+          (keypress)="allowOnlyNumbers($event)"
+          #newPhone="ngModel"
+          [class.input-error]="newPhone.invalid && (newPhone.dirty || newPhone.touched) || phoneCreateInvalid"
+          (blur)="phoneCreateInvalid = newPhone.dirty && !validatePhone(newCustomer.phoneNumber)" />
+        <div class="validation-error"
+             *ngIf="newPhone.invalid && (newPhone.dirty || newPhone.touched)">
+          <span *ngIf="newPhone.errors?.['required']">Este campo es obligatorio.</span>
+          <span *ngIf="newPhone.errors?.['pattern']">El teléfono debe tener 10 dígitos numéricos.</span>
+        </div>
+        <div class="validation-error"
+             *ngIf="!newPhone.invalid && phoneCreateInvalid">
+          El número de teléfono no es válido.
+        </div>
+      </div>
+
+      <div class="buttons-row">
+        <button type="button" class="btn-secondary" (click)="closeCreateModal()">Cancelar</button>
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="createForm.invalid || cedulaCreateInvalid || phoneCreateInvalid">
+          Guardar cliente
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ======== MODAL EDITAR CLIENTE ======== -->
+<div class="modal-backdrop" *ngIf="isEditModalOpen">
+  <div class="modal-box">
+    <h2>Editar cliente</h2>
+
+    <form
+      (ngSubmit)="updateCustomer()"
+      #editForm="ngForm"
+      class="client-form">
+
+      <!-- NOMBRES -->
+      <div class="row">
+        <label>Nombres</label>
+        <input
+          type="text"
+          [(ngModel)]="editCustomer.firstName"
+          name="editFirstName"
+          required
+          minlength="2"
+          (keypress)="allowOnlyLetters($event)"
+          (input)="sanitizeNameInput(editCustomer, 'firstName')"
+          #editFirstName="ngModel"
+          [class.input-error]="editFirstName.invalid && (editFirstName.dirty || editFirstName.touched)"
+        />
+        <div class="validation-error"
+             *ngIf="editFirstName.invalid && (editFirstName.dirty || editFirstName.touched)">
+          <span *ngIf="editFirstName.errors?.['required']">Este campo es obligatorio.</span>
+          <span *ngIf="editFirstName.errors?.['minlength']">Debe tener al menos 2 caracteres.</span>
+        </div>
+      </div>
+
+      <!-- APELLIDOS -->
+      <div class="row">
+        <label>Apellidos</label>
+        <input
+          type="text"
+          [(ngModel)]="editCustomer.lastName"
+          name="editLastName"
+          required
+          minlength="2"
+          (keypress)="allowOnlyLetters($event)"
+          (input)="sanitizeNameInput(editCustomer, 'lastName')"
+          #editLastName="ngModel"
+          [class.input-error]="editLastName.invalid && (editLastName.dirty || editLastName.touched)"
+        />
+        <div class="validation-error"
+             *ngIf="editLastName.invalid && (editLastName.dirty || editLastName.touched)">
+          <span *ngIf="editLastName.errors?.['required']">Este campo es obligatorio.</span>
+          <span *ngIf="editLastName.errors?.['minlength']">Debe tener al menos 2 caracteres.</span>
+        </div>
+      </div>
+
+      <!-- CÉDULA (NO EDITABLE) -->
+      <div class="row">
+        <label>Cédula</label>
+        <input
+          type="text"
+          [(ngModel)]="editCustomer.cedula"
+          name="editCedula"
+          readonly
+          #editCedula="ngModel"
+          class="bg-gray-100" />
+        <small class="hint">La cédula no se puede modificar una vez creada.</small>
+      </div>
+
+      <!-- EMAIL -->
+      <div class="row">
+        <label>Email</label>
+        <input
+          type="email"
+          [(ngModel)]="editCustomer.email"
+          name="editEmail"
+          required
+          pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+          #editEmail="ngModel"
+          [class.input-error]="editEmail.invalid && (editEmail.dirty || editEmail.touched)"
+        />
+        <div class="validation-error"
+             *ngIf="editEmail.invalid && (editEmail.dirty || editEmail.touched)">
+          <span *ngIf="editEmail.errors?.['required']">Este campo es obligatorio.</span>
+          <span *ngIf="editEmail.errors?.['pattern'] || editEmail.errors?.['email']">Ingrese un email válido.</span>
+        </div>
+      </div>
+
+      <!-- TELÉFONO -->
+      <div class="row">
+        <label>Teléfono</label>
+        <input
+          type="text"
+          [(ngModel)]="editCustomer.phoneNumber"
+          name="editPhone"
+          required
+          pattern="^[0-9]{10}$"
+          maxlength="10"
+          (keypress)="allowOnlyNumbers($event)"
+          #editPhone="ngModel"
+          [class.input-error]="editPhone.invalid && (editPhone.dirty || editPhone.touched) || phoneEditInvalid"
+          (blur)="phoneEditInvalid = editPhone.dirty && !validatePhone(editCustomer.phoneNumber)" />
+        <div class="validation-error"
+             *ngIf="editPhone.invalid && (editPhone.dirty || editPhone.touched)">
+          <span *ngIf="editPhone.errors?.['required']">Este campo es obligatorio.</span>
+          <span *ngIf="editPhone.errors?.['pattern']">El teléfono debe tener 10 dígitos numéricos.</span>
+        </div>
+        <div class="validation-error"
+             *ngIf="!editPhone.invalid && phoneEditInvalid">
+          El número de teléfono no es válido.
+        </div>
+      </div>
+
+      <!-- SALDO -->
+      <div class="row">
+        <label>Saldo actual</label>
+        <input type="text" [value]="editCurrentBalance | number:'1.2-2'" disabled />
+        <small class="hint">Este valor es solo de lectura.</small>
+      </div>
+
+      <div class="buttons-row">
+        <button type="button" class="btn-secondary" (click)="closeEditModal()">Cancelar</button>
+        <button
+          type="submit"
+          class="btn-primary"
+          [disabled]="editForm.invalid || phoneEditInvalid">
+          Guardar cambios
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= MODAL DE ERROR GENÉRICO ================= -->
+<div class="modal-backdrop" *ngIf="isErrorModalOpen">
+  <div class="modal-box-small">
+    <h2 style="color: #e74c3c;">⚠️ Error</h2>
+    <p class="alert alert-error" style="text-align: left;">
+      {{ modalErrorMessage }}
+    </p>
+    <div class="buttons-row buttons-center">
+      <button type="button" class="btn-primary" (click)="closeErrorModal()">Aceptar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ================= MODAL ELIMINAR CLIENTE (CONFIRMACIÓN) ================= -->
+<div class="modal-backdrop" *ngIf="isDeleteModalOpen">
+  <div class="modal-box-small">
+    <h2 style="color: #e74c3c;">Confirmar eliminación</h2>
+    <p>
+      Estás a punto de eliminar al cliente:<br>
+      <strong>{{ clientToDelete?.firstName }} {{ clientToDelete?.lastName }}</strong> ({{ clientToDelete?.cedula }})
+    </p>
+    <p style="font-size: 0.85em; color: #64748b;">
+      Esta acción es irreversible.
+    </p>
+
+    <div class="buttons-row buttons-center">
+      <button type="button" class="btn-secondary" (click)="closeDeleteModal()">Cancelar</button>
+      <button type="button" class="btn-danger" (click)="confirmDelete()">Eliminar Definitivamente</button>
+    </div>
+  </div>
+</div>
